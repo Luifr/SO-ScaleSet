@@ -1,5 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+
+#ifdef _WIN32 // if its windows
+    #include <windows.h>
+    #define  sleep(x) Sleep(1000*x)
+#else // if its linux
+    #include<unistd.h> 
+#endif
 
 typedef struct vm{
     int id;
@@ -49,18 +57,6 @@ VM** createVMS(int number){
     return vm;
 }
 
-// SCALESET* createScaleset(){
-//     SCALESET* ss = malloc(sizeof(SCALESET));
-//     ss->vms = createVM();
-//     ss->id = 0;
-//     ss->meanCpuUsage = 0;
-//     ss->nextId = 0;
-//     ss->numberOfActiveVms = 0;
-//     ss->numberOfInactiveVms = 0;
-//     ss->ruleId = meanCpuUsage;
-//     return ss;
-// }
-
 SCALESET* createScaleset(int number){
     SCALESET* ss = malloc(sizeof(SCALESET));
     ss->vms = createVMS(number);
@@ -74,15 +70,33 @@ SCALESET* createScaleset(int number){
     return ss;
 }
 
+void execNone(SCALESET* ss){
+
+}
+
 
 int main(int argc, char* argv[]){
     
     SCALESET* ss = createScaleset(1);
+    clock_t programBegin,programEnd;
+    clock_t loopBegin,loopEnd;
+    clock_t readBegin, readEnd;
+    clock_t timer=0;
+    
+    programBegin = clock();
 
-    int (*this)(int argc, char* argv[]) = main;
-    printf("asd\n");
-    if(argv[0][0])
-    this(0,NULL);
+    while(1){
+        loopBegin = clock();
+        timer += clock();
+        sleep(3);
+        loopEnd = clock();
+        printf("%ld %ld\n",loopBegin,loopEnd);
+        printf("elapsed time: %lf\n",(double)(loopEnd-loopBegin)/(double)CLOCKS_PER_SEC);
+        printf("total time: %lf\n",(double)(loopEnd-programBegin)/(double)CLOCKS_PER_SEC);
+        printf("total time2: %lf\n",(double)(timer-programBegin)/(double)CLOCKS_PER_SEC);
+    }
+
+
 
     return 0;
 }
