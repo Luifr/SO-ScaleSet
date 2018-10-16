@@ -11,11 +11,12 @@
 
 typedef struct vm{
     int id;
+    char isActive;
     char autoShutdown;
     int shutdownTime; // hour to auto shutdown (from 0 to 23)
     char autoTurnOn;
     int turnOnTime; // if this machinie is set to turn on automatically, the sacleset will turn on this machine, if it is off
-    float cpuUsage; // cpu use measured in percent
+    int cpuUsage; // cpu use measured in a arbitrary unit
     int processPower; // process power measured in a arbitrary unit
 } VM;
 
@@ -34,10 +35,13 @@ typedef struct scaleset{
     int totalVms;
     float meanCpuUsage; // mean os cpuUSage of current vms
     int ruleId;
+    float upperLimit;
+    float lowerLimit;
 }SCALESET;
 
 VM* createVM(){
     VM* vm = malloc(sizeof(VM));
+    vm->isActive = 1;
     vm->autoShutdown = 0;
     vm->autoTurnOn = 0;
     vm->cpuUsage = 0;
@@ -70,8 +74,40 @@ SCALESET* createScaleset(int number){
     return ss;
 }
 
-void execNone(SCALESET* ss){
+void calculateMeanCpuUsage(SCALESET* ss){
+    int len = ss->totalVms;
+    int sumUsage=0,sumTotal=0;
+    for(int i=0;i<len;i++){
+        sumUsage += ss->vms[i]->cpuUsage;
+        sumTotal += ss->vms[i]->processPower;
+    }
+    ss->meanCpuUsage = sumUsage / (float)sumTotal;
+}
 
+void execMeanCpuUsage(SCALESET* ss){
+    calculateMeanCpuUsage(ss);
+    if(ss->meanCpuUsage > ss->upperLimit){
+        addVm(ss);
+    }
+    if(ss->meanCpuUsage < ss->lowerLimit && ss->totalVms > 1){
+        removeVm(ss);
+    }
+}
+
+void addVm(SCALESET* ss){
+    ss->vms = realloc(ss->vms,ss->totalVms+1 * sizeof(VM*));
+    ss->vms[ss->totalVms++] = createVM();
+    ss->numberOfActiveVms++;
+}
+
+void removeVm(SCALESET* ss){
+    if(ss->vms[ss->totalVms-1]->isActive){
+        ss->numberOfActiveVms--;
+    }
+    else{
+        ss->numberOfInactiveVms;
+    }
+    ss->vms = realloc(ss->vms,--ss->totalVms * sizeof(VM*));
 }
 
 
@@ -88,6 +124,8 @@ int main(int argc, char* argv[]){
     while(1){
         loopBegin = clock();
         timer += clock();
+        // if sclaeset ruleid == meanCpuUsage
+        //      execMeanCpuUsage()
         sleep(3);
         loopEnd = clock();
         printf("%ld %ld\n",loopBegin,loopEnd);
