@@ -1,3 +1,6 @@
-.vscode/settings.json
+.vscode
 a.out
 a.exe
+input.in
+inputGenerator
+main

@@ -1,6 +1,6 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <time.h>
+#include "inputGenerator.c"
 
 #ifdef _WIN32 // if its windows
     #include <windows.h>
@@ -33,7 +33,7 @@ typedef struct scaleset{
     int numberOfActiveVms;
     int numberOfInactiveVms;
     int totalVms;
-    float meanCpuUsage; // mean os cpuUSage of current vms
+    float meanCpuUsage; /// mean os cpuUSage of current vms
     int ruleId;
     float upperLimit;
     float lowerLimit;
@@ -110,6 +110,16 @@ void removeVm(SCALESET* ss){
     ss->vms = realloc(ss->vms,--ss->totalVms * sizeof(VM*));
 }
 
+void distributeProcessing(SCALESET* ss, int processing) {
+    if (ss == NULL)
+        return;
+
+    int mid = processing / ss->numberOfActiveVms;
+
+    for (int i = 0; i < ss->numberOfActiveVms; ++i) {
+        ss->vms[i]->cpuUsage = mid;
+    }
+}
 
 int main(int argc, char* argv[]){
     
@@ -121,11 +131,18 @@ int main(int argc, char* argv[]){
     
     programBegin = clock();
 
+    GenerateInput();
+    FILE* fp = fopen(FILE_NAME, "r");
+
+    int processRequired;
+
     while(1){
+        fscanf(fp, "%d", &processRequired);
+
         loopBegin = clock();
         timer += clock();
         // if sclaeset ruleid == meanCpuUsage
-        //      execMeanCpuUsage()
+        // execMeanCpuUsage()
         sleep(3);
         loopEnd = clock();
         printf("%ld %ld\n",loopBegin,loopEnd);
