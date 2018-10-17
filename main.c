@@ -16,8 +16,9 @@ typedef struct vm{
     int shutdownTime; // hour to auto shutdown (from 0 to 23)
     char autoTurnOn;
     int turnOnTime; // if this machinie is set to turn on automatically, the sacleset will turn on this machine, if it is off
-    int cpuUsage; // cpu use measured in a arbitrary unit
-    int processPower; // process power measured in a arbitrary unit
+    float cpuUsage; // cpu use measured in a arbitrary unit
+    float costPerHour;
+    float processPower; // process power measured in a arbitrary unit
 } VM;
 
 enum policy{
@@ -39,6 +40,9 @@ typedef struct scaleset{
     float lowerLimit;
 }SCALESET;
 
+void addVm(SCALESET* ss);
+void removeVm(SCALESET* ss);
+
 VM* createVM(){
     VM* vm = malloc(sizeof(VM));
     vm->isActive = 1;
@@ -53,6 +57,7 @@ VM** createVMS(int number){
     VM** vm = malloc(sizeof(VM*)*number);
     for(int i=0;i<number;i++){
         vm[i] = malloc(sizeof(VM));
+        vm[i]->isActive = 1;
         vm[i]->autoShutdown = 0;
         vm[i]->autoTurnOn = 0;
         vm[i]->cpuUsage = 0;
@@ -61,16 +66,18 @@ VM** createVMS(int number){
     return vm;
 }
 
-SCALESET* createScaleset(int number){
+SCALESET* createScaleset(int number, int ruleId){
     SCALESET* ss = malloc(sizeof(SCALESET));
     ss->vms = createVMS(number);
     ss->id = 0;
     ss->meanCpuUsage = 0;
     ss->nextId = 0;
-    ss->numberOfActiveVms = 0;
+    ss->numberOfActiveVms = number;
     ss->numberOfInactiveVms = 0;
-    ss->ruleId = meanCpuUsage;
-
+    ss->totalVms = number;
+    ss->ruleId = ruleId;
+    ss->lowerLimit = 0.2;
+    ss->upperLimit = 0.6;
     return ss;
 }
 
@@ -105,9 +112,10 @@ void removeVm(SCALESET* ss){
         ss->numberOfActiveVms--;
     }
     else{
-        ss->numberOfInactiveVms;
+        ss->numberOfInactiveVms--;
     }
-    ss->vms = realloc(ss->vms,--ss->totalVms * sizeof(VM*));
+    ss->totalVms--;
+    ss->vms = realloc(ss->vms,ss->totalVms * sizeof(VM*));
 }
 
 void distributeProcessing(SCALESET* ss, int processing) {
@@ -117,13 +125,14 @@ void distributeProcessing(SCALESET* ss, int processing) {
     int mid = processing / ss->numberOfActiveVms;
 
     for (int i = 0; i < ss->numberOfActiveVms; ++i) {
-        ss->vms[i]->cpuUsage = mid;
+        if(ss->vms[i]->isActive)
+            ss->vms[i]->cpuUsage = mid;
     }
 }
 
 int main(int argc, char* argv[]){
     
-    SCALESET* ss = createScaleset(1);
+    SCALESET* ss = createScaleset(1,meanCpuUsage);
     clock_t programBegin,programEnd;
     clock_t loopBegin,loopEnd;
     clock_t readBegin, readEnd;
@@ -135,20 +144,27 @@ int main(int argc, char* argv[]){
     FILE* fp = fopen(FILE_NAME, "r");
 
     int processRequired;
+    int moneySpent=0;
 
-    while(1){
-        fscanf(fp, "%d", &processRequired);
-
+    while(fscanf(fp, "%d", &processRequired) != EOF){
         loopBegin = clock();
-        timer += clock();
-        // if sclaeset ruleid == meanCpuUsage
-        // execMeanCpuUsage()
-        sleep(3);
+        timer += loopBegin;
+
+        distributeProcessing(ss,processRequired);
+
+        moneySpent += ss->vms[0]->costPerHour * ss->totalVms;
+
+        if(ss->ruleId == meanCpuUsage){
+            execMeanCpuUsage(ss);
+        }
+        
+        printf("%d\n",ss->totalVms);
+
         loopEnd = clock();
-        printf("%ld %ld\n",loopBegin,loopEnd);
+        
+        
         printf("elapsed time: %lf\n",(double)(loopEnd-loopBegin)/(double)CLOCKS_PER_SEC);
         printf("total time: %lf\n",(double)(loopEnd-programBegin)/(double)CLOCKS_PER_SEC);
-        printf("total time2: %lf\n",(double)(timer-programBegin)/(double)CLOCKS_PER_SEC);
     }
 
 
