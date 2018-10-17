@@ -68,6 +68,7 @@ VM** createVMS(int number){
 
 SCALESET* createScaleset(int number, int ruleId){
     SCALESET* ss = malloc(sizeof(SCALESET));
+    //ss->vms = malloc(sizeof(VM*));
     ss->vms = createVMS(number);
     ss->id = 0;
     ss->meanCpuUsage = 0;
@@ -102,7 +103,7 @@ void execMeanCpuUsage(SCALESET* ss){
 }
 
 void addVm(SCALESET* ss){
-    ss->vms = realloc(ss->vms,ss->totalVms+1 * sizeof(VM*));
+    ss->vms = realloc(ss->vms,(ss->totalVms+1) * sizeof(VM*));
     ss->vms[ss->totalVms++] = createVM();
     ss->numberOfActiveVms++;
 }
