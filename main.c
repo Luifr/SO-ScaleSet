@@ -96,11 +96,15 @@ SCALESET* createScaleSet(int ruleId, int numberVMs, int processPower, float cost
 
 void calculateMeanCpuUsage(SCALESET* ss){
     int len = ss->totalVms;
-    int sumUsage=0,sumTotal=0;
+    int sumUsage=0,sumTotal=0, sumActive = 0;
     for(int i=0;i<len;i++){
         sumUsage += ss->vms[i]->cpuUsage;
         sumTotal += ss->vms[i]->processPower;
+        if (ss->vms[i]->isActive)
+            sumActive += ss->vms[i]->processPower;
     }
+    ss->totalProcessPower = sumTotal;
+    ss->activeProcessPower = sumActive;
     ss->meanCpuUsage = sumUsage / (float)sumTotal;
 }
 
@@ -138,16 +142,35 @@ void removeVm(SCALESET* ss){
 }
     
 
-void distributeProcessing(SCALESET* ss, int processing) {
+// Returns the remaining requests needed to be processed (if the processing required
+// is higher than the available).
+int distributeProcessing(SCALESET* ss, int processing) {
     if (ss == NULL)
         return;
-    int procinicial = processing;
+
+    // Calculates the percentage of process power required over the power available.
+    // Than we can set the processing of each active vm to this percent, so we get all
+    // the power needed, on the most balanced way.
+    float usagePercent = processing / (float) ss->activeProcessPower;
+    if (usagePercent > 1.0) // The percent cannot be higher than 1.
+        usagePercent = 1;
+
+    // Set the process power to each machine =)
+    for (int i = 0; i < ss->numberOfActiveVms; ++i)
+        if(ss->vms[i]->isActive)
+            ss->vms[i]->cpuUsage = ss->vms[i]->processPower * usagePercent;
+
+    // Get the remaining process power (if exists) to be processed in the next cycle.
+    int remaining = processing - ss->activeProcessPower;
+    return (remaining < 0) ? 0 : remaining;
+
+    /*int procinicial = processing;
     int mid = processing / ss->numberOfActiveVms;
     for (int i = 0; i < ss->numberOfActiveVms; ++i) {
         if(ss->vms[i]->isActive)
             processing-=mid;
             ss->vms[i]->cpuUsage = mid;
-    }
+    }*/
 }
 
 int calculateMoneySpent(SCALESET* ss){
