@@ -2,8 +2,8 @@
 #include <stdlib.h>
 
 #define FILE_NAME "input.in"
-#define FILE_LENGTH 256
-#define MAX_INPUT 1024
+#define FILE_LENGTH 1024
+#define MAX_INPUT 10000
 
 int GenerateInput () {
 
@@ -16,4 +16,8 @@ int GenerateInput () {
 
     fclose(input);
 
+}
+
+int main() {
+    GenerateInput();
 }
