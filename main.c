@@ -11,6 +11,7 @@
 
 #define FILE_NAME "input2.in"
 #define OUT_FILE_NAME "output.out"
+#define OUT_FILE_NAME2 "output2.out"
 FILE* outfp;
 
 //Colors
@@ -271,7 +272,10 @@ int main(int argc, char* argv[]){
 
     SCALESET* ss = createScaleSetFromInput(); 
 
-    outfp = fopen(OUT_FILE_NAME,"w+");
+    if (ss->ruleId == 0)
+        outfp = fopen(OUT_FILE_NAME,"w+");
+    else
+        outfp = fopen(OUT_FILE_NAME2,"w+");
 
     clock_t programBegin, programEnd;
     clock_t loopBegin, loopEnd;
@@ -293,7 +297,7 @@ int main(int argc, char* argv[]){
     printf("------------------------------------------------------------------------\n"RESET);
 
     while(fscanf(fp, "%d", &processRequired) != EOF || remaining > 0){ 
-        printf("Number of requests: %d, Remaining requests: %d\n", processRequired, remaining);
+        printf("Input = %d, remaining = %d\n", processRequired, remaining);
         loopBegin = clock();
         timer += loopBegin;
 
