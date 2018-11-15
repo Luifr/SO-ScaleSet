@@ -9,29 +9,12 @@
     #include<unistd.h> 
 #endif
 
-#define FILE_NAME "input2.in"
-#define OUT_FILE_NAME "output.out"
-#define OUT_FILE_NAME2 "output2.out"
-FILE* outfp;
+#define FILE_NAME "input.in"
+#define OUT_SCALE_SET "scaleSet.out"
+#define OUT_CONSTANT "constant.out"
+#define LOG ".log"
 
-//Colors
-#define RESET   "\033[0m"
-#define BLACK   "\033[30m"      /* Black */
-#define RED     "\033[31m"      /* Red */
-#define GREEN   "\033[32m"      /* Green */
-#define YELLOW  "\033[33m"      /* Yellow */
-#define BLUE    "\033[34m"      /* Blue */
-#define MAGENTA "\033[35m"      /* Magenta */
-#define CYAN    "\033[36m"      /* Cyan */
-#define WHITE   "\033[37m"      /* White */
-#define BOLDBLACK   "\033[1m\033[30m"      /* Bold Black */
-#define BOLDRED     "\033[1m\033[31m"      /* Bold Red */
-#define BOLDGREEN   "\033[1m\033[32m"      /* Bold Green */
-#define BOLDYELLOW  "\033[1m\033[33m"      /* Bold Yellow */
-#define BOLDBLUE    "\033[1m\033[34m"      /* Bold Blue */
-#define BOLDMAGENTA "\033[1m\033[35m"      /* Bold Magenta */
-#define BOLDCYAN    "\033[1m\033[36m"      /* Bold Cyan */
-#define BOLDWHITE   "\033[1m\033[37m"      /* Bold White */
+FILE* logFile;  // File to store all the steps during the simulation =)
 
 typedef struct vm{
     int id;
@@ -155,18 +138,18 @@ void execFixed(SCALESET* ss){ //TODO
 
 void execMeanCpuUsage(SCALESET* ss){
     calculateMeanCpuUsage(ss);
-    printf("Mean CPU usage: %.2f\n", ss->meanCpuUsage);
+    fprintf(logFile, "Mean CPU usage: %.2f\n", ss->meanCpuUsage);
     if(ss->meanCpuUsage > ss->upperLimit){
         int numberVM = ss->numberOfActiveVms;
         for(int i=0;i<ss->upperLimitVMs;i++)
             addVm(ss);
-        printf("Mean CPU usage is above upper limit.\nVMs added: %d\n", ss->numberOfActiveVms - numberVM);
+        fprintf(logFile, "Mean CPU usage is above upper limit.\nVMs added: %d\n", ss->numberOfActiveVms - numberVM);
     }
     if(ss->meanCpuUsage < ss->lowerLimit && ss->totalVms > 1){
        int numberVM = ss->numberOfActiveVms;
         for(int i = 0; (i < ss->lowerLimitVMs) && (ss->totalVms > 1);i++)
             removeVm(ss);
-        printf("Mean CPU usage is bellow lower limit.\nVMs removed: %d\n", numberVM - ss->numberOfActiveVms);
+        fprintf(logFile, "Mean CPU usage is bellow lower limit.\nVMs removed: %d\n", numberVM - ss->numberOfActiveVms);
     }
 }
 
@@ -184,6 +167,7 @@ void removeVm(SCALESET* ss){
         ss->numberOfInactiveVms--;
     }
     ss->totalVms--;
+    free(ss->vms[ss->totalVms]);
     ss->vms = realloc(ss->vms,ss->totalVms * sizeof(VM*));
 }
     
@@ -209,25 +193,12 @@ int distributeProcessing(SCALESET* ss, int processing) {
     // Get the remaining process power (if exists) to be processed in the next cycle.
     int remaining = processing - ss->activeProcessPower;
     return (remaining < 0) ? 0 : remaining;
-
-    /*int procinicial = processing;
-    int mid = processing / ss->numberOfActiveVms;
-    for (int i = 0; i < ss->numberOfActiveVms; ++i) {
-        if(ss->vms[i]->isActive)
-            processing-=mid;
-            ss->vms[i]->cpuUsage = mid;
-    }*/
 }
 
 int calculateMoneySpent(SCALESET* ss){
     int totalCost = 0;
     int costPerHour = ss->vms[0]->costPerHour;
     totalCost = ss->numberOfActiveVms*costPerHour;
-    // for(int i=0;i<ss->totalVms;i++){
-    //     if(ss->vms[i]->isActive){
-    //         totalCost += ss->vms[i]->costPerHour;
-    //     }
-    // }
     return totalCost;
 }
 
@@ -242,20 +213,20 @@ SCALESET* createScaleSetFromInput(){
     printf("Input the following information:\n");
     printf("Rule ");
     scanf("%d", &ruleId);
-    printf("Inicial number of VMs ");
+    printf("\nInicial number of VMs ");
     scanf("%d", &numberVMs);
-    printf("Processing power of each VM ");
+    printf("\nProcessing power of each VM ");
     scanf("%d", &processPower);
-    printf("Cost of one VM per hour ");
+    printf("\nCost of one VM per hour ");
     scanf("%f", &costPerHour);
     if(ruleId==0){
-        printf("Lower limit (0;1] ");
+        printf("\nLower limit (0;1] ");
         scanf("%f",&lowerLimit);
-        printf("Upper limit (0;1] ");
+        printf("\nUpper limit (0;1] ");
         scanf("%f",&upperLimit);
-        printf("Number of VMs that will be shutted down, if CPU usage is bellow the lower limit ");
+        printf("\nNumber of VMs that will be shutted down, if CPU usage is bellow the lower limit ");
         scanf("%d",&lowerLimitVMs);
-        printf("Number of VMs that will be turned on, if CPU usage is above de upper limit ");
+        printf("\nNumber of VMs that will be turned on, if CPU usage is above de upper limit ");
         scanf("%d",&upperLimitVMs);
         ss = createScaleSet(ruleId, numberVMs, processPower,
             costPerHour, lowerLimit, upperLimit, lowerLimitVMs, upperLimitVMs);
@@ -271,11 +242,14 @@ SCALESET* createScaleSetFromInput(){
 int main(int argc, char* argv[]){
 
     SCALESET* ss = createScaleSetFromInput(); 
+    FILE* outfp;
+
+    logFile = fopen(LOG, "w+");
 
     if (ss->ruleId == 0)
-        outfp = fopen(OUT_FILE_NAME,"w+");
+        outfp = fopen(OUT_SCALE_SET, "w+");
     else
-        outfp = fopen(OUT_FILE_NAME2,"w+");
+        outfp = fopen(OUT_CONSTANT, "w+");
 
     clock_t programBegin, programEnd;
     clock_t loopBegin, loopEnd;
@@ -293,11 +267,8 @@ int main(int argc, char* argv[]){
     int day = 0;
     int remaining = 0;
 
-    printf(BOLDYELLOW"\n                               Simulation\n");
-    printf("------------------------------------------------------------------------\n"RESET);
-
     while(fscanf(fp, "%d", &processRequired) != EOF || remaining > 0){ 
-        printf("Input = %d, remaining = %d\n", processRequired, remaining);
+        fprintf(logFile, "Input = %d, remaining = %d\n", processRequired, remaining);
         loopBegin = clock();
         timer += loopBegin;
 
@@ -308,8 +279,8 @@ int main(int argc, char* argv[]){
         moneySpent += localMoneySpent;
         fprintf(outfp, "%d\n", moneySpent);
 
-        printf("Money Spent: %d\n", localMoneySpent);
-        printf("Active VMs: %d\n",ss->totalVms);
+        fprintf(logFile, "Money Spent: %d\n", localMoneySpent);
+        fprintf(logFile, "Active VMs: %d\n",ss->totalVms);
 
         if(ss->ruleId == meanCpuUsage){
             execMeanCpuUsage(ss);
@@ -324,12 +295,18 @@ int main(int argc, char* argv[]){
         day += (hour+1) / 24;
         hour = (hour+1)%24;
         
-        printf("current time: day %d, %02d:00\n", day, hour);
-        printf(BOLDYELLOW"------------------------------------------------------------------------\n"RESET);
+        fprintf(logFile, "current time: day %d, %02d:00\n", day, hour);
     }
 
-    //fprintf(outfp, "%d\n", moneySpent);
-    printf("Total money spent: %d\n", moneySpent);
+    printf("\nSIMULATION FINISHED SUCCESSFULLY\nTotal money spent: %d\n", moneySpent);
+
+    fclose(outfp);
+    fclose(fp);
+    fclose(logFile);
+
+    for(int i=0; i<ss->totalVms; i++)
+        if(ss->vms[i])
+            free(ss->vms[i]);
 
     free(ss->vms);
     free(ss);

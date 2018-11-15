@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define FILE_NAME "input.in"
+#define FILE_NAME "inputRand.in"
 #define FILE_LENGTH 1024
 #define MAX_INPUT 10000
 
