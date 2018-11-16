@@ -1,15 +1,15 @@
 #include <stdio.h>
-#include<stdlib.h>
+#include <stdlib.h>
 #include <time.h>
 
 #ifdef _WIN32 // if its windows
     #include <windows.h>
     #define  sleep(x) Sleep(1000*x)
 #else // if its linux
-    #include<unistd.h> 
+    #include <unistd.h> 
 #endif
 
-#define FILE_NAME "input.in"
+#define FILE_NAME "inputRand.in"
 #define OUT_SCALE_SET "scaleSet.out"
 #define OUT_CONSTANT "constant.out"
 #define LOG ".log"
@@ -118,7 +118,7 @@ SCALESET* createFixedScaleSet(int ruleId, int numberVMs, int processPower, float
     return ss;
 }
 
-void calculateMeanCpuUsage(SCALESET* ss){
+int calculateMeanCpuUsage(SCALESET* ss){
     int len = ss->totalVms;
     int sumUsage = 0, sumTotal = 0, sumActive = 0;
     for(int i=0;i<len;i++){
@@ -130,6 +130,8 @@ void calculateMeanCpuUsage(SCALESET* ss){
     ss->totalProcessPower = sumTotal;
     ss->activeProcessPower = sumActive;
     ss->meanCpuUsage = sumUsage / (float)sumTotal;
+
+    return sumUsage;
 }
 
 void execFixed(SCALESET* ss){ //TODO
@@ -137,18 +139,24 @@ void execFixed(SCALESET* ss){ //TODO
 }
 
 void execMeanCpuUsage(SCALESET* ss){
-    calculateMeanCpuUsage(ss);
+    int CpuUsage = calculateMeanCpuUsage(ss);
     fprintf(logFile, "Mean CPU usage: %.2f\n", ss->meanCpuUsage);
+
     if(ss->meanCpuUsage > ss->upperLimit){
         int numberVM = ss->numberOfActiveVms;
-        for(int i=0;i<ss->upperLimitVMs;i++)
+	int i = 0;
+	while (CpuUsage / (float)ss->activeProcessPower > ss->upperLimit && i++ < ss->upperLimitVMs)
             addVm(ss);
+
         fprintf(logFile, "Mean CPU usage is above upper limit.\nVMs added: %d\n", ss->numberOfActiveVms - numberVM);
     }
-    if(ss->meanCpuUsage < ss->lowerLimit && ss->totalVms > 1){
+
+    else if(ss->meanCpuUsage < ss->lowerLimit && ss->totalVms > 1){
        int numberVM = ss->numberOfActiveVms;
-        for(int i = 0; (i < ss->lowerLimitVMs) && (ss->totalVms > 1);i++)
+	int i = 0;
+	while (CpuUsage / (float)ss->activeProcessPower < ss->lowerLimit && (i++ < ss->lowerLimitVMs) && (ss->totalVms > 1))
             removeVm(ss);
+
         fprintf(logFile, "Mean CPU usage is bellow lower limit.\nVMs removed: %d\n", numberVM - ss->numberOfActiveVms);
     }
 }
@@ -157,6 +165,8 @@ void addVm(SCALESET* ss){
     ss->vms = realloc(ss->vms,(ss->totalVms+1) * sizeof(VM*));
     ss->vms[ss->totalVms++] = createVM(ss->nextId);
     ss->numberOfActiveVms++;
+    ss->totalProcessPower += ss->vms[ss->totalVms-1]->processPower;
+    ss->activeProcessPower += ss->vms[ss->totalVms-1]->processPower;
 }
 
 void removeVm(SCALESET* ss){
@@ -166,6 +176,8 @@ void removeVm(SCALESET* ss){
     else{
         ss->numberOfInactiveVms--;
     }
+    ss->totalProcessPower -= ss->vms[ss->totalVms-1]->processPower;
+    ss->activeProcessPower -= ss->vms[ss->totalVms-1]->processPower;
     ss->totalVms--;
     free(ss->vms[ss->totalVms]);
     ss->vms = realloc(ss->vms,ss->totalVms * sizeof(VM*));
@@ -271,6 +283,8 @@ int main(int argc, char* argv[]){
         fprintf(logFile, "Input = %d, remaining = %d\n", processRequired, remaining);
         loopBegin = clock();
         timer += loopBegin;
+
+        calculateMeanCpuUsage(ss);
 
         processRequired += remaining;
         remaining = distributeProcessing(ss, processRequired);
