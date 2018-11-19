@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define FILE_NAME "inputRand.in"
+#define FILE_NAME "input.in"
 #define FILE_LENGTH 24 * 10
 #define RAND_PERCENT 15
 #define MAX_POWER 4000

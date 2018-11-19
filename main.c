@@ -9,7 +9,7 @@
     #include <unistd.h> 
 #endif
 
-#define FILE_NAME "inputRand.in"
+#define FILE_NAME "input.in"
 #define OUT_SCALE_SET "scaleSet.out"
 #define OUT_CONSTANT "constant.out"
 #define LOG ".log"
