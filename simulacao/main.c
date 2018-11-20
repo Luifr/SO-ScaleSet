@@ -2,10 +2,10 @@
 #include <stdlib.h>
 #include <time.h>
 
-#ifdef _WIN32 // if its windows
+#ifdef _WIN32 // If its windows.
     #include <windows.h>
     #define  sleep(x) Sleep(1000*x)
-#else // if its linux
+#else // If its linux.
     #include <unistd.h> 
 #endif
 
@@ -14,50 +14,50 @@
 #define OUT_CONSTANT "constant.out"
 #define LOG ".log"
 
-FILE* logFile;  // File to store all the steps during the simulation =)
+FILE* logFile;  // File to store all the steps during the simulation.
 
 typedef struct vm{
-    int id;
-    char isActive;
-    char autoShutdown;
-    int shutdownTime; // hour to auto shutdown (from 0 to 23)
+    int id;	// VM's id number.
+    char isActive; // Digit that indicates if the VM is active or not.
+    char autoShutdown; 
+    int shutdownTime; // Hour to auto shutdown (from 0 to 23)
     char autoTurnOn;
-    int turnOnTime; // if this machinie is set to turn on automatically,
-                    // the sacleset will turn on this machine, if it is off
-    float costPerHour;
-    float cpuUsage; // cpu use measured in a arbitrary unit
-    float processPower; // process power measured in a arbitrary unit
+    int turnOnTime; // If this machine is set to turn on automatically,
+                    // the scaleset will turn on this machine, if it is off
+    float costPerHour; // DIscribes the cost of each Vm per hour.
+    float cpuUsage; // Cpu use measured in a arbitrary unit.
+    float processPower; // Process power measured in a arbitrary unit.
 } VM;
 
 enum policy{
-    meanCpuUsage, // vms will be set or shutdown based on mean cpu usage
-                  // (vms will be based on a image, that is, will all be equal)
-    fixed,  // set a specific number of pre configured vms (each vm will be 
-            //configured manually and can be different from each other)
+    meanCpuUsage, // Vms will be set or shutdown based on mean cpu usage
+                  // (vms will be based on a image, that is, will all be equal).
+    fixed,  // Set a specific number of pre configured vms (each vm will be 
+            //configured manually and can be different from each other).
 };
 
 typedef struct scaleset{
-    int id;
+    int id; 
     int nextId; // id of the next instancied vm
     VM** vms;
-    int numberOfActiveVms;
+    int numberOfActiveVms; // Control variables
     int numberOfInactiveVms;
     int totalVms;
     float totalProcessPower;
     float activeProcessPower;
-    float meanCpuUsage; /// mean os cpuUSage of current vms
-    int ruleId;
-    float lowerLimit;
-    float upperLimit;
-    int lowerLimitVMs; //how many VMs will be shuted down
-    int upperLimitVMs; //how many VMs will be added
+    float meanCpuUsage; // Mean os cpuUSage of current VMs.
+    int ruleId;  // This defines if the program will have the Scale Set activated or not.
+    float lowerLimit; //Lower limit of precessing.
+    float upperLimit; //Upper limit of processing.
+    int lowerLimitVMs; // How many VMs will be shuted down.
+    int upperLimitVMs; // How many VMs will be added.
 
 }SCALESET;
 
 void addVm(SCALESET* ss);
 void removeVm(SCALESET* ss);
 
-VM* createVM(int nextId){
+VM* createVM(int nextId){ 
     VM* vm = malloc(sizeof(VM));
     vm->isActive = 1;
     vm->id = nextId++;
@@ -68,6 +68,7 @@ VM* createVM(int nextId){
     return vm;
 }
 
+// Function that creates VMs for the Scale Set.
 VM** createVMS(int number, int nextId, float costPerHour, int processPower){
     VM** vm = malloc(sizeof(VM*)*number);
     for(int i=0;i<number;i++){
@@ -83,6 +84,7 @@ VM** createVMS(int number, int nextId, float costPerHour, int processPower){
     return vm;
 }
 
+// Function that creates the Scale Set.
 SCALESET* createScaleSet(int ruleId, int numberVMs, int processPower, float costPerHour, 
     float lowerLimit, float upperLimit, int lowerLimitVMs, int upperLimitVMs){
     SCALESET* ss = malloc(sizeof(SCALESET));
@@ -103,6 +105,7 @@ SCALESET* createScaleSet(int ruleId, int numberVMs, int processPower, float cost
     return ss;
 }
 
+// This function willQ	
 SCALESET* createFixedScaleSet(int ruleId, int numberVMs, int processPower, float costPerHour){
     SCALESET* ss = malloc(sizeof(SCALESET));
     ss->vms = createVMS(numberVMs, 0, costPerHour, processPower);
@@ -148,16 +151,19 @@ void execMeanCpuUsage(SCALESET* ss){
 	while (CpuUsage / (float)ss->activeProcessPower > ss->upperLimit && i++ < ss->upperLimitVMs)
             addVm(ss);
 
-        fprintf(logFile, "Mean CPU usage is above upper limit.\nVMs added: %d\n", ss->numberOfActiveVms - numberVM);
+        fprintf(logFile, "Mean CPU usage is above upper limit.\nVMs added: %d\n",
+		ss->numberOfActiveVms - numberVM);
     }
 
     else if(ss->meanCpuUsage < ss->lowerLimit && ss->totalVms > 1){
        int numberVM = ss->numberOfActiveVms;
 	int i = 0;
-	while (CpuUsage / (float)ss->activeProcessPower < ss->lowerLimit && (i++ < ss->lowerLimitVMs) && (ss->totalVms > 1))
+	while (CpuUsage / (float)ss->activeProcessPower < ss->lowerLimit && 
+			(i++ < ss->lowerLimitVMs) && (ss->totalVms > 1))
             removeVm(ss);
 
-        fprintf(logFile, "Mean CPU usage is bellow lower limit.\nVMs removed: %d\n", numberVM - ss->numberOfActiveVms);
+        fprintf(logFile, "Mean CPU usage is bellow lower limit.\nVMs removed: %d\n",
+		 numberVM - ss->numberOfActiveVms);
     }
 }
 
