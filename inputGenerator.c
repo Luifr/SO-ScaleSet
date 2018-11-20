@@ -7,12 +7,14 @@
 #define MAX_POWER 4000
 #define HOUR_MULTIPLIER {0.19, 0.14, 0.10, 0.07, 0.05, 0.11, 0.19, 0.27, 0.33, 0.48, 0.59, 0.70,\
 			 0.74, 0.88, 0.96, 1.00, 1.00, 0.90, 0.94, 0.92, 0.86, 0.70, 0.52, 0.28}
-			//0,    1,    2,    3,    4,    5,    6,    7,    8,    9,    10,   11
-//#define MAX_INPUT 10000
+
+#define RAND_SEED 0	// Can be changed to modify the numbers generated
 
 #define MAX_VALUE(a, b) (((a) > (b)) ? (a) : (b)) // Retuns the max value between the numbers 'a' and 'b'
 
 int GenerateInput () {
+
+	srand(RAND_SEED);
 
 	FILE* input;
 	input = fopen(FILE_NAME, "w");
@@ -30,10 +32,6 @@ int GenerateInput () {
 		finalNumber = MAX_POWER * totalMultiplier;
 		fprintf(input, "%d\n", finalNumber);
 	}
-
-	/*for (int i = 0; i < FILE_LENGTH; ++i) {
-		fprintf(input, "%d\n", rand() % MAX_INPUT);
-	}*/
 
 	fclose(input);
 }
